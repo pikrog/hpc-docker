@@ -9,8 +9,8 @@ You need to have an active [docker](https://docs.docker.com/get-docker/) service
 
 Open terminal. Make a new directory for the environment. Name it whatever you want, then switch to it.
 
-    $ mkdir mpi
-    $ cd mpi
+    $ mkdir mpich
+    $ cd mpich
     
 Prepare a working directory. This directory will contain compiled MPI applications and will be shared amongst containers through a bind mount. Name it `workdir`.
 
