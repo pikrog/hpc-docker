@@ -51,14 +51,13 @@ Then you can use the private key as the identity file.
 ## Single node environment
 In case you don't actually need multiple workers but just want to use the MPI dependencies (like the toolchain or the process executor), you can start a single container and immediately work with it.
 
-    $ docker run -it --rm pikrog/mpi-node:0.3 /bin/ash
-    / # cd /home/user/mpi
-    /home/user/mpi #
+    $ docker run -it --rm pikrog/mpich:4.0.2
+    / #
 
 Note that the `--rm` switch causes the container to be automatically removed after exit. Omit this switch if this behavior is unwanted.
 Alternatively, pass `-v` to attach a bind mount pointing to the working directory.
 
-    $ docker run -it --rm -v /host/path/to/workdir:/home/user/mpi pikrog/mpi-node:0.3 /bin/ash
+    $ docker run -it --rm -v /host/path/to/workdir:/container/path/to/workdir pikrog/mpich:4.0.2
 
 ## Building your first MPI application
 TBA
