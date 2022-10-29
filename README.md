@@ -1,12 +1,11 @@
 # mpich-docker
-Dockerized MPICH HPC cluster environment for convenient MPI application development.
+Dockerized MPICH HPC cluster environment for convenient MPI application development.  
+Inspired by [NLKNguyen/alpine-mpich](https://github.com/NLKNguyen/alpine-mpich). Adapted for the latest MPICH release (4.0.2).
 
 # Use
-
 You need to have an active [docker](https://docs.docker.com/get-docker/) service running
 
 ## Setting up a local development environment
-
 Open terminal. Make a new directory for the environment. Name it whatever you want, then switch to it.
 
     $ mkdir mpich
@@ -38,7 +37,7 @@ Verify the cluster status.
 
 Open bash in the master node container.
 
-     docker exec -it mpich-master-1 /bin/ash
+    $ docker exec -it mpich-master-1 /bin/ash
      
 ... or open a SSH connection to it. First, download the private key located in this repository (`mpi-master/default_private_ssh_key`) or copy it from the master container.
 
@@ -49,6 +48,17 @@ Then you can use the private key as the identity file.
     $ ssh user@localhost -i master_key
     50939476b988:~/mpi$
 
-## Building your first MPI application
+## Single node environment
+In case you don't actually need multiple workers but just want to use the MPI dependencies (like the toolchain or the process executor), you can start a single container and immediately work with it.
 
+    $ docker run -it --rm pikrog/mpi-node:0.3 /bin/ash
+    / # cd /home/user/mpi
+    /home/user/mpi #
+
+Note that the `--rm` switch causes the container to be automatically removed after exit. Omit this switch if this behavior is unwanted.
+Alternatively, pass `-v` to attach a bind mount pointing to the working directory.
+
+    $ docker run -it --rm -v /host/path/to/workdir:/home/user/mpi pikrog/mpi-node:0.3 /bin/ash
+
+## Building your first MPI application
 TBA
