@@ -1,0 +1,8 @@
+#!/bin/ash
+
+if [ -z "${HYDRA_HOST_FILE}" ]; then
+	echo "ERROR: \$HYDRA_HOST_FILE is not set"
+	exit 1
+fi
+
+( for host in "$@"; do dig ${host} +short; done ) > "${HYDRA_HOST_FILE}"

@@ -1,0 +1,20 @@
+#!/bin/ash
+
+set -e
+
+DEFAULT_WORKER_HOSTNAME="worker"
+DEFAULT_MASTER_HOSTNAME="master"
+
+if [ -z "${WORKER_HOSTNAME}" ]; then
+	echo "WARNING: \$WORKER_HOSTNAME is not set. Defaulting to \"${DEFAULT_WORKER_HOSTNAME}\"."
+	WORKER_HOSTNAME="${DEFAULT_WORKER_HOSTNAME}"
+fi
+
+if [ -z "${MASTER_HOSTNAME}" ]; then
+	echo "WARNING: \$MASTER_HOSTNAME is not set. Defaulting to \"${DEFAULT_MASTER_HOSTNAME}\"."
+	MASTER_HOSTNAME="${DEFAULT_MASTER_HOSTNAME}"
+fi
+
+update-cluster-hosts-task "${MASTER_HOSTNAME}" "${WORKER_HOSTNAME}" &
+
+exec dumb-init "$@"

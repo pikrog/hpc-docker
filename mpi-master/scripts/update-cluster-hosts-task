@@ -1,0 +1,10 @@
+#!/bin/ash
+
+set -e
+
+INTERVAL_SECONDS=${UPDATE_HOSTS_INVERVAL:-"10"}
+
+while [ true ]; do 
+	update-cluster-hosts "$@"
+	sleep "${INTERVAL_SECONDS}"
+done

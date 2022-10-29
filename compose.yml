@@ -1,0 +1,32 @@
+services:
+    worker:
+        build: ./mpi-node
+        image: pikrog/mpi-node:0.3
+        networks:
+          - main-network
+        volumes:
+          - type: bind
+            source: ./workdir/
+            target: /home/user/mpi/
+    master:
+        build: ./mpi-master
+        depends_on:
+          - worker
+        image: pikrog/mpi-master:0.3
+        environment:
+            MASTER_HOSTNAME: "master"
+            WORKER_HOSTNAME: "worker"
+        networks:
+          - main-network
+        ports:
+          - target: 22
+            host_ip: localhost
+            published: 22
+            protocol: tcp
+        volumes:
+          - type: bind
+            source: ./workdir/
+            target: /home/user/mpi/
+
+networks:
+    main-network:
