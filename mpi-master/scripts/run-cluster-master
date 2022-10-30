@@ -17,4 +17,4 @@ fi
 
 update-cluster-hosts-task "${MASTER_HOSTNAME}" "${WORKER_HOSTNAME}" &
 
-exec dumb-init "$@"
+exec dumb-init -- "$@"
