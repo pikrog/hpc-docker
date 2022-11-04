@@ -25,6 +25,10 @@ RUN apk add --no-cache perl linux-headers
 ARG LIBFABRIC_VERSION="1.15.1"
 ARG MPICH_VERSION="4.0.2"
 
+# Software source links
+ARG LIBFABRIC_SOURCE_LINK="https://github.com/ofiwg/libfabric/releases/download/v${LIBFABRIC_VERSION}/libfabric-${LIBFABRIC_VERSION}.tar.bz2"
+ARG MPICH_SOURCE_LINK="https://www.mpich.org/static/downloads/${MPICH_VERSION}/mpich-${MPICH_VERSION}.tar.gz"
+
 # Make jobs are run parallelly to speed up the compilation process
 # Adjust this parameter depending on the number of available CPU cores
 ARG PARALLEL_MAKE_JOBS=12
@@ -35,13 +39,15 @@ WORKDIR /tmp
 # Download and extract the libfabric source package
 # libfabric provided with the mpich 4.0.2 source relies on deprecated pthread_yield() and cannot be compiled on Alpine (unresolved external symbol)
 RUN \
-	wget "https://github.com/ofiwg/libfabric/releases/download/v${LIBFABRIC_VERSION}/libfabric-${LIBFABRIC_VERSION}.tar.bz2" \
-	&& tar xjf "libfabric-${LIBFABRIC_VERSION}.tar.bz2"
+# Download and save as libfabric.tarball
+	wget -O libfabric.tarball "${LIBFABRIC_SOURCE_LINK}" \
+# Extract the archive
+	&& tar xf libfabric.tarball
 
 # Configure, compile and install mpich in the temporary directory
 RUN \
 # Go to the extracted source directory
-	cd "libfabric-${LIBFABRIC_VERSION}" \
+	cd libfabric-*/ \
 # Configure with default options
 	&& ./configure \
 # Compile and install
@@ -49,15 +55,17 @@ RUN \
 
 # Download and extract the mpich source package
 RUN \
-	wget "https://www.mpich.org/static/downloads/${MPICH_VERSION}/mpich-${MPICH_VERSION}.tar.gz" \
-	&& tar xzf "mpich-${MPICH_VERSION}.tar.gz"
+# Download and save as mpich.tarball
+	wget -O mpich.tarball "${MPICH_SOURCE_LINK}" \
+# Extract the archive
+	&& tar xf mpich.tarball
 
 # Configure, compile and install mpich in the temporary directory
 RUN \
 # Go to the extracted source directory
-	cd "mpich-${MPICH_VERSION}" \
+	cd mpich-*/ \
 # Configure: Disable Python and Fortran (F08 module), tell where the libfabric include and lib directories are located
-    && ./configure --disable-fortran --disable-f08 --disable-collalgo-tests --with-libfabric=/tmp/install/usr/local \
+	&& ./configure --disable-fortran --disable-f08 --disable-collalgo-tests --with-libfabric=/tmp/install/usr/local \
 # Compile and install
 	&& make install -j "${PARALLEL_MAKE_JOBS}" DESTDIR=/tmp/install
 
