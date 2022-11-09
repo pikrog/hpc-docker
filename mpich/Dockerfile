@@ -36,38 +36,39 @@ ARG PARALLEL_MAKE_JOBS=12
 # Compile in the temporary directory
 WORKDIR /tmp
 
-# Download and extract the libfabric source package
 # libfabric provided with the mpich 4.0.2 source relies on deprecated pthread_yield() and cannot be compiled on Alpine (unresolved external symbol)
-RUN \
-# Download and save as libfabric.tarball
-	wget -O libfabric.tarball "${LIBFABRIC_SOURCE_LINK}" \
-# Extract the archive
-	&& tar xf libfabric.tarball
+# Download the libfabric source and save it as libfabric.tarball
+RUN wget -O libfabric.tarball "${LIBFABRIC_SOURCE_LINK}"
 
-# Configure, compile and install mpich in the temporary directory
-RUN \
-# Go to the extracted source directory
-	cd libfabric-*/ \
-# Configure with default options
-	&& ./configure \
-# Compile and install
-	&& make install -j "${PARALLEL_MAKE_JOBS}" DESTDIR=/tmp/install
+# Extract the archive and rename the source folder
+RUN tar xf libfabric.tarball && mv libfabric-*/ libfabric
 
-# Download and extract the mpich source package
-RUN \
-# Download and save as mpich.tarball
-	wget -O mpich.tarball "${MPICH_SOURCE_LINK}" \
-# Extract the archive
-	&& tar xf mpich.tarball
+# Work with the libfabric source
+WORKDIR /tmp/libfabric
 
-# Configure, compile and install mpich in the temporary directory
-RUN \
-# Go to the extracted source directory
-	cd mpich-*/ \
-# Configure: Disable Python and Fortran (F08 module), tell where the libfabric include and lib directories are located
-	&& ./configure --disable-fortran --disable-f08 --disable-collalgo-tests --with-libfabric=/tmp/install/usr/local \
-# Compile and install
-	&& make install -j "${PARALLEL_MAKE_JOBS}" DESTDIR=/tmp/install
+# Configure libfabric with default options
+RUN ./configure
+
+# Compile and install libfabric
+RUN make install -j "${PARALLEL_MAKE_JOBS}" DESTDIR=/tmp/install
+
+# Go back to the temporary directory
+WORKDIR /tmp
+
+# Download the mpich source package
+RUN wget -O mpich.tarball "${MPICH_SOURCE_LINK}"
+
+# Extract the mpich archive and rename the source folder
+RUN tar xf mpich.tarball && mv mpich-*/ mpich
+
+# Work with the mpich source
+WORKDIR /tmp/mpich
+
+# Configure mpich: Disable Python and Fortran (F08 module), tell where the libfabric include and lib directories are located
+RUN ./configure --disable-fortran --disable-f08 --disable-collalgo-tests --with-libfabric=/tmp/install/usr/local
+
+# Compile and install mpich
+RUN make install -j "${PARALLEL_MAKE_JOBS}" DESTDIR=/tmp/install
 
 ################################################
 #     Install in the system (final stage)      #
