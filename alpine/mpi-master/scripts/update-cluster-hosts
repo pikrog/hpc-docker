@@ -1,4 +1,4 @@
-#!/bin/ash
+#!/bin/sh
 
 if [ -z "${HYDRA_HOST_FILE}" ]; then
 	echo "ERROR: \$HYDRA_HOST_FILE is not set"

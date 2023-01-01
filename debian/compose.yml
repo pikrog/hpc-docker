@@ -1,0 +1,26 @@
+services:
+    mpich:
+        image: pikrog/mpich:${MPICH_VERSION}-${BASE_DISTRO_TAG}
+        build:
+            context: mpich
+            args:
+                MPICH_VERSION: ${MPICH_VERSION}
+                BASE_DISTRO: ${BASE_DISTRO}
+    worker:
+        depends_on:
+          - mpich
+        image: pikrog/mpi-node:${VERSION_TAG}-${BASE_DISTRO_TAG}
+        build:
+            context: mpi-node
+            args:
+                MPICH_VERSION_TAG: ${MPICH_VERSION}
+                BASE_DISTRO_TAG: ${BASE_DISTRO_TAG}
+    master:
+        depends_on:
+          - worker
+        image: pikrog/mpi-master:${VERSION_TAG}-${BASE_DISTRO_TAG}
+        build:
+            context: mpi-master
+            args:
+                WORKER_VERSION_TAG: ${VERSION_TAG}
+                BASE_DISTRO_TAG: ${BASE_DISTRO_TAG}

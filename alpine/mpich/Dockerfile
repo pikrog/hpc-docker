@@ -5,7 +5,9 @@
 ################################################
 #                  Build base                  #
 ################################################
-FROM alpine:3.16 as build-base
+
+ARG BASE_DISTRO="alpine:3.16"
+FROM ${BASE_DISTRO} as build-base
 
 # Author info
 LABEL org.opencontainers.image.authors="pikrog@github.com"

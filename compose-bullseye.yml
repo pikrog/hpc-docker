@@ -1,7 +1,7 @@
 services:
     worker:
         build: ./mpi-node
-        image: pikrog/mpi-node:0.3-alpine
+        image: pikrog/mpi-node:0.3-bullseye
         networks:
           - main-network
         volumes:
@@ -12,7 +12,7 @@ services:
         build: ./mpi-master
         depends_on:
           - worker
-        image: pikrog/mpi-master:0.3-alpine
+        image: pikrog/mpi-master:0.3-bullseye
         environment:
             MASTER_HOSTNAME: "master"
             WORKER_HOSTNAME: "worker"

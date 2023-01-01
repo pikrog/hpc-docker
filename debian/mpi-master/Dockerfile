@@ -2,16 +2,18 @@
 #                     MPI Cluster Master                     #
 ##############################################################
 
-FROM pikrog/mpi-node:0.3
+ARG WORKER_VERSION_TAG
+ARG BASE_DISTRO_TAG
+FROM pikrog/mpi-node:${WORKER_VERSION_TAG}-${BASE_DISTRO_TAG}
 
 # Install dig for domain resolution
-RUN apk add --no-cache bind-tools
+RUN apt-get install -y dnsutils && apt-get clean
 
 # Path to the default hosts file containing worker IP addresses
 # If not provided, the default path is /etc/mpi/hosts
-ARG DEFAULT_HOST_FILE="/etc/mpi/hosts"
+ARG DEFAULT_HOST_FILE
 # Hydra PM looks for a hosts file specified by this environmental variable (unless provided manually with -machinefile)
-ENV HYDRA_HOST_FILE=${DEFAULT_HOST_FILE}
+ENV HYDRA_HOST_FILE=${DEFAULT_HOST_FILE:-"/etc/mpi/hosts"}
 
 # Prepare the default hosts file
 RUN \
@@ -33,8 +35,8 @@ COPY --chown=${MPI_USER} --chmod=600 ["./default_private_ssh_key", "/home/${MPI_
 
 # Time between default host file updates (in seconds)
 # The default value is 10 seconds
-ARG UPDATE_HOSTS_INTERVAL="10"
-ENV UPDATE_HOSTS_INTERVAL=${UPDATE_HOSTS_INTERVAL}
+ARG UPDATE_HOSTS_INTERVAL
+ENV UPDATE_HOSTS_INTERVAL=${UPDATE_HOSTS_INTERVAL:-"10"}
 
 # Setup entrypoint
 # This script runs a task periodically updating the hosts file in the background
