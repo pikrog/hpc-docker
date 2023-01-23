@@ -37,7 +37,7 @@ Verify the cluster status.
 
 Open bash in the master node container.
 
-    $ docker exec -it mpich-master-1 /bin/ash
+    $ docker exec -it --user user mpich-master-1 /bin/sh
      
 ... or open a SSH connection to it. First, download the private key located in this repository (`mpi-master/default_private_ssh_key`) or copy it from the master container.
 
