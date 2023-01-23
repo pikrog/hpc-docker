@@ -1,6 +1,5 @@
 services:
     worker:
-        build: ./mpi-node
         image: pikrog/mpi-node:0.3-alpine
         networks:
           - main-network
@@ -9,7 +8,6 @@ services:
             source: ./workdir/
             target: /home/user/mpi/
     master:
-        build: ./mpi-master
         depends_on:
           - worker
         image: pikrog/mpi-master:0.3-alpine
