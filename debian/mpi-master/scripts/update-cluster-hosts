@@ -5,4 +5,4 @@ if [ -z "${HYDRA_HOST_FILE}" ]; then
 	exit 1
 fi
 
-( for host in "$@"; do dig ${host} +short; done ) > "${HYDRA_HOST_FILE}"
+( for host in "$@"; do dig ${host} +short; done ) | grep -e "^[0-9]" > "${HYDRA_HOST_FILE}"
