@@ -78,19 +78,22 @@ ENV UPDATE_HOSTS_INTERVAL=${UPDATE_HOSTS_INTERVAL}
 # Path to the default hosts file containing worker IP addresses
 # If not provided, the default path is /etc/mpi/hosts
 ARG DEFAULT_HOST_FILE="/etc/mpi/hosts"
+ENV DEFAULT_HOST_FILE=${DEFAULT_HOST_FILE}
+
 # Hydra PM looks for a hosts file specified by this environmental variable (unless provided manually with -machinefile)
-ENV HYDRA_HOST_FILE=${DEFAULT_HOST_FILE}
+ARG DEFAULT_HOST_FILE_ENV="HYDRA_HOST_FILE"
+ENV ${DEFAULT_HOST_FILE_ENV}=${DEFAULT_HOST_FILE}
 
 # Prepare the default hosts file
 RUN \
 # Create the directory hierarchy
-	dir=$(dirname "${HYDRA_HOST_FILE}"); mkdir -p "$dir" \
+	dir=$(dirname "${DEFAULT_HOST_FILE}"); mkdir -p "$dir" \
 # Create an empty file for storing hosts
-	&& touch "${HYDRA_HOST_FILE}" \
+	&& touch "${DEFAULT_HOST_FILE}" \
 # Adjust permissions (root: read-write, group and others: read-only)
-	&& chmod 644 "${HYDRA_HOST_FILE}" \
+	&& chmod 644 "${DEFAULT_HOST_FILE}" \
 # Permamently export the environmental variable
-	&& echo "export HYDRA_HOST_FILE=\"${HYDRA_HOST_FILE}\"" >> /etc/profile
+	&& echo "export ${DEFAULT_HOST_FILE_ENV}=\"${DEFAULT_HOST_FILE}\"" >> /etc/profile
 
 # Copy master startup and utility scripts
 COPY --chmod=755 ./scripts /usr/local/bin/

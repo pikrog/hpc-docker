@@ -5,9 +5,9 @@ set -e
 DEFAULT_WORKER_HOSTNAME="worker"
 DEFAULT_MASTER_HOSTNAME="master"
 
-if [ "${NODE_MODE}" == "worker" ]; then
+if [ "${NODE_MODE}" = "worker" ]; then
 	echo "This node is a worker"
-elif [ "${NODE_MODE}" == "master" ]; then
+elif [ "${NODE_MODE}" = "master" ]; then
 	echo "This node is a master"
 	
 	if [ -z "${WORKER_HOSTNAME}" ]; then

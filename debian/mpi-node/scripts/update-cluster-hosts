@@ -1,8 +1,8 @@
 #!/bin/sh
 
-if [ -z "${HYDRA_HOST_FILE}" ]; then
-	echo "ERROR: \$HYDRA_HOST_FILE is not set"
+if [ -z "${DEFAULT_HOST_FILE}" ]; then
+	echo "ERROR: \$DEFAULT_HOST_FILE is not set"
 	exit 1
 fi
 
-( for host in "$@"; do dig ${host} +short; done ) | grep -e "^[0-9]" > "${HYDRA_HOST_FILE}"
+( for host in "$@"; do dig ${host} +short; done ) | grep -e "^[0-9]" > "${DEFAULT_HOST_FILE}"
