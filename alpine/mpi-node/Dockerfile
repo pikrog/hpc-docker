@@ -1,13 +1,18 @@
 ##############################################################
-#                     MPI Cluster Worker                     #
+#                      MPI Cluster Node                      #
 ##############################################################
 
-ARG MPICH_VERSION_TAG
+ARG MPI_VERSION_TAG
 ARG BASE_DISTRO_TAG
-FROM pikrog/mpich:${MPICH_VERSION_TAG}-${BASE_DISTRO_TAG}
+ARG BASE_IMAGE_NAME
+FROM ${BASE_IMAGE_NAME}:${MPI_VERSION_TAG}-${BASE_DISTRO_TAG}
 
-# Install SSH and dumb-init (for proper SSH process signal handling)
-RUN apk add --no-cache openssh dumb-init
+# Install SSH, dumb-init (for proper SSH process signal handling) and dig (for domain resolution)
+RUN apk add --no-cache openssh dumb-init bind-tools
+
+##############################################################
+#                        Common Config                       #
+##############################################################
 
 # Go to the SSH configuration directory
 WORKDIR /etc/ssh
@@ -30,8 +35,8 @@ RUN \
 
 # Create a non-privileged passwordless user
 # The default MPI user is named "user"
-ARG MPI_USER
-ENV MPI_USER=${MPI_USER:-"user"}
+ARG MPI_USER="user"
+ENV MPI_USER=${MPI_USER}
 RUN adduser -D "${MPI_USER}" \
 # Install usermod
 	&& apk add --no-cache shadow \
@@ -42,8 +47,8 @@ RUN adduser -D "${MPI_USER}" \
 	
 # Path to the MPI directory (where MPI executables will be placed)
 # The default path is ~/mpi
-ARG MPI_DIRECTORY
-ENV MPI_DIRECTORY=${MPI_DIRECTORY:-"/home/${MPI_USER}/mpi"}
+ARG MPI_DIRECTORY="/home/${MPI_USER}/mpi"
+ENV MPI_DIRECTORY=${MPI_DIRECTORY}
 
 # Switch to the MPI user to create their own files
 USER ${MPI_USER}
@@ -54,33 +59,64 @@ RUN \
 	mkdir -p "${MPI_DIRECTORY}" \
 # After users login, this is their first working directory
 	&& echo "cd \"${MPI_DIRECTORY}\"" >> ~/.profile
-
+	
 # Make and switch to the users .ssh directory. Both SSH server and client look for authorized keys in this directory by default
 WORKDIR /home/${MPI_USER}/.ssh
 
-# Generate a SSH key pair
+# Deploy default SSH authentication keys. Only the MPI user can read/write them
+COPY --chown=${MPI_USER} --chmod=600 ["./keys", "/home/${MPI_USER}/.ssh"]
+
+# Node mode: worker/master
+ENV NODE_MODE="worker"
+
+##############################################################
+#                        Master Config                       #
+##############################################################
+
+# Switch back to root
+USER root
+
+# Time between default host file updates (in seconds)
+# The default value is 10 seconds
+ARG UPDATE_HOSTS_INTERVAL="10"
+ENV UPDATE_HOSTS_INTERVAL=${UPDATE_HOSTS_INTERVAL}
+
+# Path to the default hosts file containing worker IP addresses
+# If not provided, the default path is /etc/mpi/hosts
+ARG DEFAULT_HOST_FILE="/etc/mpi/hosts"
+ENV DEFAULT_HOST_FILE=${DEFAULT_HOST_FILE}
+
+# Hydra PM looks for a hosts file specified by this environmental variable (unless provided manually with -machinefile)
+ARG DEFAULT_HOST_FILE_ENV="HYDRA_HOST_FILE"
+ENV ${DEFAULT_HOST_FILE_ENV}=${DEFAULT_HOST_FILE}
+
+# Prepare the default hosts file
 RUN \
-# Generate an ed25519 key pair (dont encrypt the private key)
-# The private key will be automatically used by the SSH client during public key authentication (default IdentityFile config)
-	ssh-keygen -t ed25519 -P "" -f id_ed25519 \
-# Authorize the public key
-	&& cat id_ed25519.pub >> authorized_keys \
-# Only allow the owning MPI user to read/write their authorized_keys file
-	&& chmod 600 authorized_keys \
-# The directory itself should be executable but only for the owner
-	&& chmod 700 . \
-# Delete the unnecessary public key file
-	&& rm id_ed25519.pub
+# Create the directory hierarchy
+	dir=$(dirname "${DEFAULT_HOST_FILE}"); mkdir -p "$dir" \
+# Create an empty file for storing hosts
+	&& touch "${DEFAULT_HOST_FILE}" \
+# Adjust permissions (root: read-write, group and others: read-only)
+	&& chmod 644 "${DEFAULT_HOST_FILE}" \
+# Permamently export the environmental variable
+	&& echo "export ${DEFAULT_HOST_FILE_ENV}=\"${DEFAULT_HOST_FILE}\"" >> /etc/profile
+
+# Copy master startup and utility scripts
+COPY --chmod=755 ./scripts /usr/local/bin/
+
+##############################################################
+#                        Finish Config                       #
+##############################################################
 
 # Restore workdir
 WORKDIR /
 
-# Switch back to root to run the SSH server
-USER root
-
 # Setup entrypoint
-# Use dumb-init to allow proper signal forwarding
-ENTRYPOINT ["dumb-init", "--"]
+# When the entrypoint script finishes, it executes the command passed to it - that is the SSH server by default
+ENTRYPOINT ["run-cluster-node"]
 
-# Start the SSH server by default. Do not run it in the background
+# Start the SSH server. Verbose mode. Do not run it in the background
 CMD ["/usr/sbin/sshd", "-D"]
+
+# This is the default SSH port
+EXPOSE 22/tcp

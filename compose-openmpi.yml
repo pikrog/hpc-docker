@@ -1,0 +1,31 @@
+services:
+    worker:
+        image: pikrog/mpi-node:1.0-alpine-openmpi
+        networks:
+          - main-network
+        volumes:
+          - type: bind
+            source: ./workdir/
+            target: /home/user/mpi/
+    master:
+        depends_on:
+          - worker
+        image: pikrog/mpi-node:1.0-alpine-openmpi
+        environment:
+            MASTER_HOSTNAME: "master"
+            WORKER_HOSTNAME: "worker"
+            NODE_MODE: "master"
+        networks:
+          - main-network
+        ports:
+          - target: 22
+            host_ip: localhost
+            published: 22
+            protocol: tcp
+        volumes:
+          - type: bind
+            source: ./workdir/
+            target: /home/user/mpi/
+
+networks:
+    main-network:

@@ -6,7 +6,7 @@
 #                  Build base                  #
 ################################################
 
-ARG BASE_DISTRO="alpine:3.16"
+ARG BASE_DISTRO="alpine:3.17.3"
 FROM ${BASE_DISTRO} as build-base
 
 # Author info
@@ -25,7 +25,7 @@ RUN apk add --no-cache perl linux-headers
 
 # Software version
 ARG LIBFABRIC_VERSION="1.15.1"
-ARG MPICH_VERSION="4.0.2"
+ARG MPICH_VERSION="4.1.1"
 
 # Software source links
 ARG LIBFABRIC_SOURCE_LINK="https://github.com/ofiwg/libfabric/releases/download/v${LIBFABRIC_VERSION}/libfabric-${LIBFABRIC_VERSION}.tar.bz2"
@@ -40,19 +40,19 @@ WORKDIR /tmp
 
 # libfabric provided with the mpich 4.0.2 source relies on deprecated pthread_yield() and cannot be compiled on Alpine (unresolved external symbol)
 # Download the libfabric source and save it as libfabric.tarball
-RUN wget -O libfabric.tarball "${LIBFABRIC_SOURCE_LINK}"
+# RUN wget -O libfabric.tarball "${LIBFABRIC_SOURCE_LINK}"
 
 # Extract the archive and rename the source folder
-RUN tar xf libfabric.tarball && mv libfabric-*/ libfabric
+# RUN tar xf libfabric.tarball && mv libfabric-*/ libfabric
 
 # Work with the libfabric source
-WORKDIR /tmp/libfabric
+# WORKDIR /tmp/libfabric
 
 # Configure libfabric with default options
-RUN ./configure
+# RUN ./configure
 
 # Compile and install libfabric
-RUN make install -j "${PARALLEL_MAKE_JOBS}" DESTDIR=/tmp/install
+# RUN make install -j "${PARALLEL_MAKE_JOBS}" DESTDIR=/tmp/install
 
 # Go back to the temporary directory
 WORKDIR /tmp
@@ -67,7 +67,7 @@ RUN tar xf mpich.tarball && mv mpich-*/ mpich
 WORKDIR /tmp/mpich
 
 # Configure mpich: Disable Python and Fortran (F08 module), tell where the libfabric include and lib directories are located
-RUN ./configure --disable-fortran --disable-f08 --disable-collalgo-tests --with-libfabric=/tmp/install/usr/local
+RUN ./configure --disable-fortran --disable-f08 --disable-collalgo-tests # --with-libfabric=/tmp/install/usr/local
 
 # Compile and install mpich
 RUN make install -j "${PARALLEL_MAKE_JOBS}" DESTDIR=/tmp/install

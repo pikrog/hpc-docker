@@ -1,0 +1,23 @@
+#!/bin/sh
+
+set -e
+
+TEST_INTERVAL_SECONDS=${UPDATE_HOSTS_INVERVAL:-"10"}
+
+num_hosts()
+{
+	cat "${HYDRA_HOST_FILE}" | wc -l
+}
+
+echo "Waiting for the nodes to converge..."
+
+current_num_hosts=$(num_hosts)
+echo "${current_num_hosts}/$1"
+
+while [ "${current_num_hosts}" -ne "$1" ]; do
+	sleep "${TEST_INTERVAL_SECONDS}"
+	current_num_hosts=$(num_hosts)
+	echo "${current_num_hosts}/$1"
+done
+
+echo "Converged"

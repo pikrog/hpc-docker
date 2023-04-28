@@ -5,14 +5,15 @@
 ################################################
 #                  Build base                  #
 ################################################
-ARG BASE_DISTRO="debian:bullseye"
+
+ARG BASE_DISTRO="alpine:3.17.3"
 FROM ${BASE_DISTRO} as build-base
 
 # Author info
 LABEL org.opencontainers.image.authors="pikrog@github.com"
 
-# Update system dependencies repository and install build essentials (i.a. GCC compiler) and wget utility
-RUN apt-get update && apt-get install -y build-essential && apt-get clean
+# Update system dependencies and install build base (i.a. GCC compiler)
+RUN apk update && apk upgrade && apk add --no-cache build-base
 
 ################################################
 # Compile and install in a temporary directory #
@@ -20,13 +21,13 @@ RUN apt-get update && apt-get install -y build-essential && apt-get clean
 FROM build-base as install
 
 # Install compile-time dependencies
-RUN apt-get install -y perl wget
+RUN apk add --no-cache perl linux-headers
 
 # Software version
-ARG MPICH_VERSION="4.1.1"
+ARG OPENMPI_VERSION="4.1.5"
 
 # Software source links
-ARG MPICH_SOURCE_LINK="https://www.mpich.org/static/downloads/${MPICH_VERSION}/mpich-${MPICH_VERSION}.tar.gz"
+ARG OPENMPI_SOURCE_LINK="https://download.open-mpi.org/release/open-mpi/v{major_version}/openmpi-{version}.tar.gz"
 
 # Make jobs are run parallelly to speed up the compilation process
 # Adjust this parameter depending on the number of available CPU cores
@@ -35,20 +36,24 @@ ARG PARALLEL_MAKE_JOBS=12
 # Compile in the temporary directory
 WORKDIR /tmp
 
-# Download the mpich source package and save it as mpich.tarball
-RUN wget -O mpich.tarball "${MPICH_SOURCE_LINK}"
+# Download the OpenMPI source package
+# Format the URL with version numbers
+RUN MAJOR_VERSION=$(echo "${OPENMPI_VERSION}" | sed -r "s/^([0-9]+\.[0-9]+).*/\1/") \
+	&& URL=$(echo ${OPENMPI_SOURCE_LINK} | sed "s/{major_version}/${MAJOR_VERSION}/" | sed "s/{version}/${OPENMPI_VERSION}/") \
+	&& wget -O openmpi.tarball "${URL}"
 
-# Extract the archive and rename the directory
-RUN tar xf mpich.tarball && mv mpich-*/ mpich
+# Extract the OpenMPI archive and rename the source folder
+RUN tar xf openmpi.tarball && mv openmpi-*/ openmpi
 
-# Go to the extracted directory
-WORKDIR /tmp/mpich
+# Work with the OpenMPI source
+WORKDIR /tmp/openmpi
 
-# Configure mpich: Disable Python and Fortran (F08 module)
-RUN ./configure --disable-fortran --disable-f08 --disable-collalgo-tests
+# Configure OpenMPI
+RUN ./configure 
 
-# Compile and install
-RUN make install -j "${PARALLEL_MAKE_JOBS}" DESTDIR=/tmp/install
+# Compile and install OpenMPI
+RUN DESTDIR=/tmp/install make -j "${PARALLEL_MAKE_JOBS}" all
+RUN DESTDIR=/tmp/install make install
 
 ################################################
 #     Install in the system (final stage)      #
