@@ -1,6 +1,6 @@
 services:
     worker:
-        image: pikrog/mpi-node:1.0-alpine-openmpi
+        image: pikrog/mpich-node:1.0-alpine
         networks:
           - main-network
         volumes:
@@ -10,7 +10,7 @@ services:
     master:
         depends_on:
           - worker
-        image: pikrog/mpi-node:1.0-alpine-openmpi
+        image: pikrog/mpich-node:1.0-alpine
         environment:
             MASTER_HOSTNAME: "master"
             WORKER_HOSTNAME: "worker"
