@@ -5,22 +5,29 @@
 ################################################
 #                  Build base                  #
 ################################################
+
 ARG BASE_DISTRO="debian:bullseye"
 FROM ${BASE_DISTRO} as build-base
 
 # Author info
 LABEL org.opencontainers.image.authors="pikrog@github.com"
 
-# Update system dependencies repository and install build essentials (i.a. GCC compiler) and wget utility
-RUN apt-get update && apt-get install -y build-essential && apt-get clean
+# Extra base packages to include in the final image
+ARG EXTRA_BASE_PACKAGES=""
+
+# Update apt lists and install build base (i.a. GCC compiler) and optionally extra packages
+RUN apt-get update && apt-get install -y build-essential ${EXTRA_BASE_PACKAGES} && apt-get clean
 
 ################################################
 # Compile and install in a temporary directory #
 ################################################
 FROM build-base as install
 
-# Install compile-time dependencies
-RUN apt-get install -y perl wget
+# Specify packages required to compile dependencies
+ARG COMPILATION_PACKAGES="perl wget"
+
+# Install compile-time dependencies (if any)
+RUN [ -n "${COMPILATION_PACKAGES}" ] && apt-get install -y ${COMPILATION_PACKAGES}
 
 # Software version
 ARG MPICH_VERSION="4.1.1"
@@ -30,7 +37,14 @@ ARG MPICH_SOURCE_LINK="https://www.mpich.org/static/downloads/${MPICH_VERSION}/m
 
 # Make jobs are run parallelly to speed up the compilation process
 # Adjust this parameter depending on the number of available CPU cores
-ARG PARALLEL_MAKE_JOBS=12
+ARG MAKE_PARALLEL_JOBS=12
+
+# Configure and Make arguments
+# Configure arguments. Defaults: Disable Python and Fortran (F08 module)
+ARG MPICH_CONFIGURE_ARGS="--disable-fortran --disable-f08 --disable-collalgo-tests"
+
+# Make arguments. Defaults: run parallel building jobs
+ARG MPICH_MAKE_ARGS="-j ${MAKE_PARALLEL_JOBS}"
 
 # Compile in the temporary directory
 WORKDIR /tmp
@@ -44,11 +58,11 @@ RUN tar xf mpich.tarball && mv mpich-*/ mpich
 # Go to the extracted directory
 WORKDIR /tmp/mpich
 
-# Configure mpich: Disable Python and Fortran (F08 module)
-RUN ./configure --disable-fortran --disable-f08 --disable-collalgo-tests
+# Configure mpich
+RUN ./configure ${MPICH_CONFIGURE_ARGS}
 
-# Compile and install
-RUN make install -j "${PARALLEL_MAKE_JOBS}" DESTDIR=/tmp/install
+# Compile and install mpich
+RUN make install ${MPICH_MAKE_ARGS} DESTDIR=/tmp/install
 
 ################################################
 #     Install in the system (final stage)      #
