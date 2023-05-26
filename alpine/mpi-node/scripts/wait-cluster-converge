@@ -2,12 +2,14 @@
 
 set -e
 
-TEST_INTERVAL_SECONDS=${UPDATE_HOSTS_INVERVAL:-"10"}
+TEST_INTERVAL_SECONDS=${HPC_UPDATE_HOSTS_INVERVAL:-"10"}
 
 num_hosts()
 {
-	cat "${HYDRA_HOST_FILE}" | wc -l
+	cat "${HPC_DEFAULT_HOST_FILE}" | wc -l
 }
+
+#  pgrep -f update-cluster-hosts-task >/dev/null &&
 
 echo "Waiting for the nodes to converge..."
 
@@ -21,3 +23,9 @@ while [ "${current_num_hosts}" -ne "$1" ]; do
 done
 
 echo "Converged"
+
+shift
+
+if [ $# -gt 0 ]; then
+	exec "$@"
+fi

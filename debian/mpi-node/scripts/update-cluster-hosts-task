@@ -1,10 +1,8 @@
 #!/bin/sh
 
-set -e
-
-INTERVAL_SECONDS=${UPDATE_HOSTS_INVERVAL:-"10"}
+UPDATE_INTERVAL=${HPC_UPDATE_HOSTS_INVERVAL:-"10"}
 
 while [ true ]; do 
-	update-cluster-hosts "$@"
-	sleep "${INTERVAL_SECONDS}"
+	update-cluster-hosts >/dev/null
+	sleep "${UPDATE_INTERVAL}"
 done

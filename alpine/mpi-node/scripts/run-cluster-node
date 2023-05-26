@@ -2,25 +2,134 @@
 
 set -e
 
-DEFAULT_WORKER_HOSTNAME="worker"
-DEFAULT_MASTER_HOSTNAME="master"
+DEFAULT_HPC_HOSTNAMES="master worker"
 
-if [ "${NODE_MODE}" = "worker" ]; then
+is_switch_on()
+{
+	TRUE_ANSWERS="yes true 1 enable enabled on"
+
+	ANSWER=$1
+	
+	ANSWER=$(echo "${ANSWER}" | tr [:upper:] [:lower:])
+
+	for true_answer in ${TRUE_ANSWERS}; do
+		if [ "${true_answer}" = "${ANSWER}" ]; then
+			return 0
+		fi
+	done
+
+	return 1
+}
+
+save_env()
+{
+	ENV_NAME=$1
+	ENV_VALUE=$(eval "echo \$${ENV_NAME}")
+	echo "export ${ENV_NAME}=\"${ENV_VALUE}\"" >> /etc/profile
+}
+
+install_external_ssh_keys()
+{
+	HOME_PATH=$1
+	EXTERNAL_PATH=$2
+	
+	KEYS_PATH="${HOME_PATH}/.ssh"
+	
+	mkdir -p "${KEYS_PATH}"
+	cd "${KEYS_PATH}"
+	cp -r "${EXTERNAL_PATH}/." .
+	chmod 700 .
+	chmod 600 *
+	touch authorized_keys
+	for pubkey in *.pub; do
+		if [ ! -f "${pubkey}" ]; then
+			continue
+		fi
+		(cat "${pubkey}"; echo) >> authorized_keys
+	done
+	chmod 640 authorized_keys
+}
+
+HPC_NODE_MODE=$(echo "${HPC_NODE_MODE}" | tr [:upper:] [:lower:])
+
+if [ "${HPC_NODE_MODE}" = "worker" ]; then
 	echo "This node is a worker"
-elif [ "${NODE_MODE}" = "master" ]; then
+elif [ "${HPC_NODE_MODE}" = "master" ]; then
 	echo "This node is a master"
 	
-	if [ -z "${WORKER_HOSTNAME}" ]; then
-		echo "WARNING: \$WORKER_HOSTNAME is not set. Defaulting to \"${DEFAULT_WORKER_HOSTNAME}\"."
-		WORKER_HOSTNAME="${DEFAULT_WORKER_HOSTNAME}"
-	fi
-
-	if [ -z "${MASTER_HOSTNAME}" ]; then
-		echo "WARNING: \$MASTER_HOSTNAME is not set. Defaulting to \"${DEFAULT_MASTER_HOSTNAME}\"."
-		MASTER_HOSTNAME="${DEFAULT_MASTER_HOSTNAME}"
+	if [ -z "${HPC_HOSTNAMES}" ]; then
+		echo "WARNING: \$HPC_HOSTNAMES is not set. Defaulting to '${DEFAULT_HPC_HOSTNAMES}'"
+		export HPC_HOSTNAMES="${DEFAULT_HPC_HOSTNAMES}"
 	fi
 	
-	update-cluster-hosts-task "${MASTER_HOSTNAME}" "${WORKER_HOSTNAME}" &
+	if is_switch_on "${HPC_AUTO_UPDATE_HOSTS}"; then
+		update-cluster-hosts-task &
+		echo "Started automatic host file updating"
+	else
+		echo "Automatic host file updating is disabled"
+	fi
+else
+	echo "ERROR: Unknown node mode \"${HPC_NODE_MODE}\"" >&2
+	exit 1
 fi
+
+if [ -n "${HPC_USER_PASSWORD}" ]; then
+	chpasswd <<EOF
+${HPC_MPI_USER}:${HPC_USER_PASSWORD}
+EOF
+	echo "WARNING: A password was set for the standard user '${HPC_MPI_USER}'"
+fi
+
+if [ -n "${HPC_ROOT_PASSWORD}" ]; then
+	chpasswd <<EOF
+root:${HPC_ROOT_PASSWORD}
+EOF
+	echo "WARNING: A password was set for the root"
+fi
+
+if is_switch_on "${HPC_SSH_ROOT_DEFAULT_KEYS}"; then
+	cp -a "/home/${HPC_MPI_USER}/.ssh" /root/.ssh
+	chown -R root:root /root/.ssh
+	chmod 700 /root/.ssh
+	
+	if ! is_switch_on "${HPC_SSH_ROOT_DEFAULT_PUBKEY}"; then
+		>"/root/.ssh/authorized_keys"
+		echo "The default SSH public key for the root was removed"
+	else
+		echo "WARNING: Public key authentication for root was enabled with built-in keys"
+	fi
+fi
+
+if ! is_switch_on "${HPC_SSH_USER_DEFAULT_KEYS}"; then
+	cd "/home/${HPC_MPI_USER}/.ssh"
+	rm *
+	cd - >/dev/null
+	echo "The default SSH key pair for the standard user '${HPC_MPI_USER}' was removed"
+else
+	if ! is_switch_on "${HPC_SSH_USER_DEFAULT_PUBKEY}"; then
+		>"/home/${HPC_MPI_USER}/.ssh/authorized_keys"
+		echo "The default SSH public key for the standard user '${HPC_MPI_USER}' was removed"
+	fi
+fi
+
+if (is_switch_on "${HPC_SSH_ROOT_DEFAULT_KEYS}" && is_switch_on "${HPC_SSH_ROOT_DEFAULT_PUBKEY}") \
+		|| (is_switch_on "${HPC_SSH_USER_DEFAULT_KEYS}" && is_switch_on "${HPC_SSH_USER_DEFAULT_PUBKEY}") \
+		&& [ "${HPC_NODE_MODE}" = "master" ]; then
+	echo "WARNING: This node is a master and relies on the built-in SSH public keys"
+fi
+
+if [ -n "${HPC_SSH_ROOT_EXTERNAL_KEYS}" ]; then
+	install_external_ssh_keys /root "${HPC_SSH_ROOT_EXTERNAL_KEYS}"
+	echo "SSH keys for the root were installed from ${HPC_SSH_ROOT_EXTERNAL_KEYS}"
+fi
+
+if [ -n "${HPC_SSH_USER_EXTERNAL_KEYS}" ]; then
+	install_external_ssh_keys "/home/${HPC_MPI_USER}" "${HPC_SSH_USER_EXTERNAL_KEYS}"
+	chown -R ${HPC_MPI_USER}:${HPC_MPI_USER} "/home/${HPC_MPI_USER}/.ssh"
+	echo "SSH keys for the standard user '${HPC_MPI_USER}' were installed from ${HPC_SSH_USER_EXTERNAL_KEYS}"
+fi
+
+save_env "HPC_AUTO_UPDATE_HOSTS"
+save_env "HPC_HOSTNAMES"
 
 exec dumb-init -- "$@"

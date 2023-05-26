@@ -1,8 +1,24 @@
 #!/bin/sh
 
-if [ -z "${DEFAULT_HOST_FILE}" ]; then
-	echo "ERROR: \$DEFAULT_HOST_FILE is not set"
+if [ -z "${HPC_DEFAULT_HOST_FILE}" ]; then
+	echo 'ERROR: $HPC_DEFAULT_HOST_FILE is not set' >&2
 	exit 1
 fi
 
-( for host in "$@"; do dig ${host} +short; done ) | grep -e "^[0-9]" > "${DEFAULT_HOST_FILE}"
+if [ -z "${HPC_HOSTNAMES}" ]; then
+	echo 'ERROR: $HPC_HOSTNAMES is not set' >&2
+	exit 1
+fi
+
+HOST_IPS=$(resolve-hostnames ${HPC_HOSTNAMES})
+
+if [ -z "${HOST_IPS}" ]; then
+	echo "WARNING: no hosts were found. The host file will not be overwritten."
+	exit 0
+fi
+
+NUM_HOSTS=$(printf -- "%s\n" "${HOST_IPS}" | wc -l)
+
+printf -- "%s\n" "${HOST_IPS}" > "${HPC_DEFAULT_HOST_FILE}"
+
+echo "Updated ${HPC_DEFAULT_HOST_FILE}. Found ${NUM_HOSTS} hosts."

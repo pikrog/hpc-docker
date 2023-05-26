@@ -1,0 +1,5 @@
+#!/bin/sh
+
+( for host in "$@"; do 
+	dig ${host} +short
+done ) | grep -e "^[0-9]"
