@@ -1,6 +1,6 @@
 services:
     worker:
-        image: pikrog/openmpi-node:1.0-bullseye
+        image: pikrog/openmpi-node:1.1-bullseye
         networks:
           - main-network
         volumes:
@@ -10,11 +10,20 @@ services:
     master:
         depends_on:
           - worker
-        image: pikrog/openmpi-node:1.0-bullseye
+        image: pikrog/openmpi-node:1.1-bullseye
         environment:
-            MASTER_HOSTNAME: "master"
-            WORKER_HOSTNAME: "worker"
-            NODE_MODE: "master"
+            HPC_HOSTNAMES: "master worker"
+            HPC_NODE_MODE: "master"
+            # HPC_AUTO_UPDATE_HOSTS: "no"
+            # HPC_UPDATE_HOSTS_INTERVAL: "5"
+            # HPC_SSH_USER_DEFAULT_KEYS: "no"
+            # HPC_SSH_USER_DEFAULT_PUBKEY: "no"
+            # HPC_SSH_ROOT_DEFAULT_KEYS: "yes"
+            # HPC_SSH_ROOT_DEFAULT_PUBKEY: "no"
+            # HPC_ROOT_PASSWORD: "root"
+            # HPC_USER_PASSWORD: "user"
+            # HPC_SSH_ROOT_EXTERNAL_KEYS: "/mnt/keys/root"
+            # HPC_SSH_USER_EXTERNAL_KEYS: "/mnt/keys/user"
         networks:
           - main-network
         ports:
@@ -26,6 +35,9 @@ services:
           - type: bind
             source: ./workdir/
             target: /home/user/mpi/
+          # - type: bind
+          #   source: ./keys/
+          #   target: /mnt/keys
 
 networks:
     main-network:
