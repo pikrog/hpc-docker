@@ -70,6 +70,13 @@ Alternatively, pass `-v` to attach a bind mount pointing to the working director
 
     $ docker run -it --rm -v /host/path/to/workdir:/container/path/to/workdir pikrog/mpich:4.1.1-latest
 
+## Environmental variables
+TBA
+
+
+## Advices for Swarm
+TBA
+
 # Building your applications
 
 ## Programming "on the fly"
@@ -81,8 +88,51 @@ TBA
 # Cluster node images details
 TBA
 
+# Building the images
+## Basis
+The images available at Docker Hub are built on a specific platform. When a base image is built, selected MPI libraries source codes are downloaded and compiled. This causes the environment to be configured specifically for the host platform. Therefore, certain optimizations may be enabled (e.g. AVX2) that are usually unavailable on older processors making provided images unusable on some computers. On the other hand, some people might want to get optimizations that the publicly available images do not have. Also, the online images are built for the `x86-64` architecture. Last but not least, all `Dockerfiles` can be adjusted according to users' needs (e.g. supplied with extra non-standard dependencies installed). In these cases, images have to be built from scratch.    
+## Steps
+Clone this repository.
+
+    $ git clone https://github.com/pikrog/hpc-docker
+    
+Change directory to the distribution you want to use as a base. For example, if you want to run cluster nodes within Debian Linux, go to the `debian` directory.
+
+    $ cd debian
+    
+Modify the `.env` file if needed. This file can be used to update the MPI implementation or Linux distribution version to the latest. One can also modify the distribution image name. This can be used to pick a different platform architecture, e.g. `arm64`. The `.env` file below will cause the images to be built for `arm64` with the MPICH libraries downgraded to 4.0.2.
+
+    MPICH_VERSION="4.0.2"
+    OPENMPI_VERSION="4.1.5"
+    BASE_DISTRO="arm64v8/debian:bullseye-20230522"
+    BASE_DISTRO_TAG="arm64-bullseye"
+    VERSION_TAG="1.1"
+
+To build a cluster node image, two commands need to be issued.
+
+    # This is only a template
+    $ docker compose build [MPI_IMPLEMENTATION]
+    $ docker compose build [MPI_IMPEMENTATION]-node
+
+For example, if you want to build a cluster embed with MPICH implementation, issue these commands:
+
+    $ docker compose build mpich
+    $ docker compose build mpich-node
+
+It is possible to modify some build arguments when executing the build command and affect the building process as a result. The example below depicts how to select a different link from which the MPICH source code will be downloaded.
+
+    $ docker compose build --build-arg MPICH_SOURCE_LINK=https://somewebiste.com/mpich.tar mpich
+
+See the chapter below to discover available build arguments.
+
+## Build arguments
+### Base
+|Argument|Description|Default value|
+|-|-|-|
+|`EXTRA_BASE_PACKAGES`| | *none* |
+
 ## Versions
 
 |Node Image Version Tag|MPICH Version|OpenMPI Version|
 |-|-|-|
-|1.0|4.1.1|4.1.5|
+|1.0, 1.1|4.1.1|4.1.5|
