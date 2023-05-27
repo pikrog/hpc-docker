@@ -8,7 +8,7 @@ is_switch_on()
 {
 	TRUE_ANSWERS="yes true 1 enable enabled on"
 
-	ANSWER=$1
+	ANSWER="$1"
 	
 	ANSWER=$(echo "${ANSWER}" | tr [:upper:] [:lower:])
 
@@ -23,15 +23,15 @@ is_switch_on()
 
 save_env()
 {
-	ENV_NAME=$1
+	ENV_NAME="$1"
 	ENV_VALUE=$(eval "echo \$${ENV_NAME}")
 	echo "export ${ENV_NAME}=\"${ENV_VALUE}\"" >> /etc/profile
 }
 
 install_external_ssh_keys()
 {
-	HOME_PATH=$1
-	EXTERNAL_PATH=$2
+	HOME_PATH="$1"
+	EXTERNAL_PATH="$2"
 	
 	KEYS_PATH="${HOME_PATH}/.ssh"
 	
