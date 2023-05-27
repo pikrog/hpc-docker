@@ -1,30 +1,131 @@
 #!/bin/sh
 
-set -e
-
-TEST_INTERVAL_SECONDS=${HPC_UPDATE_HOSTS_INVERVAL:-"10"}
+print_help()
+{
+	printf -- "usage: wait-cluster-converge [options] [--] [command]\n"
+	printf -- "Wait until certain number of cluster hosts are reachable, then optionally execute a supplied command\n"
+	printf -- "Available options:\n"
+	printf -- "\t-e, --equal=N \t\t The number of hosts has to be equal to N\n"
+	printf -- "\t-h, --help \t\t This page\n"
+	printf -- "\t-m, --min=N \t\t The number of hosts has to be at least N\n"
+	printf -- "\t-s, --stable=[X] \t\t The specified condition must be met for X repeated tests (X defaults to 1)\n"
+	printf -- "\t-w, --w \t\t Only watch the host file without updating it\n"
+}
 
 num_hosts()
 {
+	if [ "${WATCH}" = 0 ]; then
+		update-cluster-hosts >/dev/null
+	fi
 	cat "${HPC_DEFAULT_HOST_FILE}" | wc -l
 }
 
-#  pgrep -f update-cluster-hosts-task >/dev/null &&
+OPTIONS=$(getopt -l equal:,help,min:,stable::,watch -o e:hm:s::w -- "$@")
 
-echo "Waiting for the nodes to converge..."
+if [ $? != 0 ]; then
+	print_help
+	exit 1
+fi;
 
-current_num_hosts=$(num_hosts)
-echo "${current_num_hosts}/$1"
+eval set -- "${OPTIONS}"
 
-while [ "${current_num_hosts}" -ne "$1" ]; do
-	sleep "${TEST_INTERVAL_SECONDS}"
+set -e
+
+WATCH=0
+EQUAL=0
+MIN=0
+REQUIRED_STABLE_PASSES=0
+
+while [ $# -gt 0 ]; do
+	case "$1" in
+		-e|--equal)
+			EQUAL=1
+			NODES="$2"
+			shift
+			;;
+		-m|--min)
+			MIN=1
+			NODES="$2"
+			shift
+			;;
+		-h|--help)
+			print_help
+			exit 0
+			;;
+		-s|--stable)
+			REQUIRED_STABLE_PASSES="${2:-1}"
+			shift
+			;;
+		-w|--watch)
+			WATCH=1
+			;;
+		--)
+			shift
+			break
+			;;
+		*)
+			echo "This script does not take positional arguments. Use '--' to separate options from a command" >&2
+			exit 1
+			;;
+	esac
+	shift
+done
+
+if [ -z "${HPC_DEFAULT_HOST_FILE}" ]; then
+	echo '$HPC_DEFAULT_HOST_FILE is required but not set' >&2
+	exit 1
+fi
+
+if ([ "${EQUAL}" = 0 ] && [ "${MIN}" = 0 ]) || ([ "${EQUAL}" = 1 ] && [ "${MIN}" = 1 ]); then
+	echo "Either '--equal' or '--min' has to be set" >&2
+	exit 1
+fi
+
+if [ "${WATCH}" = 0 ] && (pgrep -f update-cluster-hosts-task >/dev/null); then
+	echo "Automatic host file updating script is running in the background. Either disable it or use '-w' option to watch the host file without changing it (not recommended due to possible data races)" >&2
+	exit 1
+fi
+
+
+TEST_INTERVAL=${HPC_UPDATE_HOSTS_INVERVAL:-"10"}
+
+while [ true ]; do
+	echo "Waiting for the nodes to converge..."
+	
 	current_num_hosts=$(num_hosts)
-	echo "${current_num_hosts}/$1"
+	echo "Got ${current_num_hosts}/${NODES} hosts"
+
+	while ([ "${EQUAL}" = 1 ] && [ "${current_num_hosts}" -ne "${NODES}" ]) || ([ "${MIN}" = 1 ] && [ "${current_num_hosts}" -lt "${NODES}" ]); do
+		sleep "${TEST_INTERVAL}"
+		current_num_hosts=$(num_hosts)
+		echo "Got ${current_num_hosts}/${NODES} hosts"
+	done
+	
+	stable_passes=0
+	converged="${current_num_hosts}"
+	if [ "${REQUIRED_STABLE_PASSES}" -gt 0 ]; then
+		echo "Verifying that the cluster hosts are stable..."
+	fi
+	
+	while [ "${stable_passes}" -lt "${REQUIRED_STABLE_PASSES}"	]; do
+		sleep "${TEST_INTERVAL}"
+		current_num_hosts=$(num_hosts)
+		if [ "${current_num_hosts}" != "${converged}" ]; then
+			break
+		else
+			stable_passes=$(( ${stable_passes} + 1 ))
+			echo "Pass ${stable_passes}/${REQUIRED_STABLE_PASSES}"
+		fi
+	done
+	
+	if [ "${stable_passes}" = "${REQUIRED_STABLE_PASSES}" ]; then
+		break
+	else
+		echo "Stability check failed, retrying"
+	fi
 done
 
 echo "Converged"
-
-shift
 
 if [ $# -gt 0 ]; then
 	exec "$@"
