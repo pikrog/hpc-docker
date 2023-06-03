@@ -175,8 +175,8 @@ See the chapter below to discover available build arguments.
 |`BASE_IMAGE_NAME`|Name of the base image from which the node image will be built.|*none*|
 |`MPI_USER`|Name of the standard (non-root) user.|`user`|
 |`MPI_DIRECTORY`|Path to the standard working directory containing i.a. MPI applications.|`/home/${MPI_USER}/mpi`|
-|`DEFAULT_HOST_FILE`|Path to the default host file. This file is used by `mpirun` and `mpiexec` wrappers and is updated automatically by the background task.|`/etc/mpi/hosts`|
-|`DEFAULT_HOST_FILE_ENV`|Name of the environmental variable that `mpirun` and `mpiexec` wrappers recognize. This name depends on particular MPI implementation.|`HYDRA_HOST_FILE` (MPICH)|
+|`DEFAULT_HOST_FILE`|Path to the default host file. This file is used by the `mpirun` and `mpiexec` wrappers and is updated automatically by the background task.|`/etc/mpi/hosts`|
+|`DEFAULT_HOST_FILE_ENV`|Name of the environmental variable for the default host file that the `mpirun` and `mpiexec` wrappers recognize. This name depends on a particular MPI implementation.|`HYDRA_HOST_FILE` (MPICH)|
 
 *Note*: `BASE_IMAGE_NAME`, `MPI_VERSION_TAG`, `BASE_DISTRO_TAG` form the full image name, e.g. for `BASE_IMAGE_NAME=pikrog/openmpi`, `MPI_VERSION_TAG=4.1.1`, `BASE_DISTRO_TAG=bullseye` they form `pikrog/openmpi:4.1.1-bullseye`.
 
