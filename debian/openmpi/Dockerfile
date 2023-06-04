@@ -76,3 +76,6 @@ FROM build-base
 
 # Copy compiled dependencies into the final destination
 COPY --from=install /tmp/install /
+
+# Make approriate links to libraries
+RUN ldconfig
