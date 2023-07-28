@@ -29,37 +29,36 @@ ARG COMPILATION_PACKAGES="perl wget"
 # Install compile-time dependencies (if any)
 RUN [ -n "${COMPILATION_PACKAGES}" ] && apt-get install -y ${COMPILATION_PACKAGES}
 
+# Compile in the temporary directory
+WORKDIR /tmp
+
 # Software version
 ARG MPICH_VERSION="4.1.1"
 
 # Software source links
 ARG MPICH_SOURCE_LINK="https://www.mpich.org/static/downloads/${MPICH_VERSION}/mpich-${MPICH_VERSION}.tar.gz"
 
+# Download the mpich source package
+RUN wget -O mpich.tarball "${MPICH_SOURCE_LINK}"
+
+# Extract the mpich archive and rename the source folder
+RUN tar xf mpich.tarball && mv mpich-*/ mpich
+
+# Work with the mpich source
+WORKDIR /tmp/mpich
+
 # Make jobs are run parallelly to speed up the compilation process
 # Adjust this parameter depending on the number of available CPU cores
 ARG MAKE_PARALLEL_JOBS=12
 
-# Configure and Make arguments
 # Configure arguments. Defaults: Disable Python and Fortran (F08 module)
 ARG MPICH_CONFIGURE_ARGS="--disable-fortran --disable-f08 --disable-collalgo-tests"
 
-# Make arguments. Defaults: run parallel building jobs
-ARG MPICH_MAKE_ARGS="-j ${MAKE_PARALLEL_JOBS}"
-
-# Compile in the temporary directory
-WORKDIR /tmp
-
-# Download the mpich source package and save it as mpich.tarball
-RUN wget -O mpich.tarball "${MPICH_SOURCE_LINK}"
-
-# Extract the archive and rename the directory
-RUN tar xf mpich.tarball && mv mpich-*/ mpich
-
-# Go to the extracted directory
-WORKDIR /tmp/mpich
-
 # Configure mpich
 RUN ./configure ${MPICH_CONFIGURE_ARGS}
+
+# Make arguments. Defaults: run parallel building jobs
+ARG MPICH_MAKE_ARGS="-j ${MAKE_PARALLEL_JOBS}"
 
 # Compile and install mpich
 RUN make install ${MPICH_MAKE_ARGS} DESTDIR=/tmp/install

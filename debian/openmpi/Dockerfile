@@ -29,26 +29,14 @@ ARG COMPILATION_PACKAGES="perl wget"
 # Install compile-time dependencies (if any)
 RUN [ -n "${COMPILATION_PACKAGES}" ] && apt-get install -y ${COMPILATION_PACKAGES}
 
+# Compile in the temporary directory
+WORKDIR /tmp
+
 # Software version
 ARG OPENMPI_VERSION="4.1.5"
 
 # Software source links
 ARG OPENMPI_SOURCE_LINK="https://download.open-mpi.org/release/open-mpi/v{major_version}/openmpi-{version}.tar.gz"
-
-# Make jobs are run parallelly to speed up the compilation process
-# Adjust this parameter depending on the number of available CPU cores
-ARG MAKE_PARALLEL_JOBS=12
-
-# Configure and Make arguments
-# Configure arguments. Defaults: standard configuration
-ARG OPENMPI_CONFIGURE_ARGS=""
-
-# Make arguments. Defaults: run parallel building jobs
-ARG OPENMPI_MAKE_ARGS="-j ${MAKE_PARALLEL_JOBS}"
-ARG OPENMPI_MAKE_INSTALL_ARGS=""
-
-# Compile in the temporary directory
-WORKDIR /tmp
 
 # Download the OpenMPI source package
 # Format the URL with version numbers
@@ -62,11 +50,21 @@ RUN tar xf openmpi.tarball && mv openmpi-*/ openmpi
 # Work with the OpenMPI source
 WORKDIR /tmp/openmpi
 
+# Configure arguments. Defaults: standard configuration
+ARG OPENMPI_CONFIGURE_ARGS=""
+
 # Configure OpenMPI
 RUN ./configure ${OPENMPI_CONFIGURE_ARGS}
 
 # Compile and install OpenMPI
+# Make arguments. Defaults: run parallel building jobs
+# Make jobs are run parallelly to speed up the compilation process
+# Adjust this parameter depending on the number of available CPU cores
+ARG MAKE_PARALLEL_JOBS=12
+ARG OPENMPI_MAKE_ARGS="-j ${MAKE_PARALLEL_JOBS}"
 RUN DESTDIR=/tmp/install make ${OPENMPI_MAKE_ARGS} all
+
+ARG OPENMPI_MAKE_INSTALL_ARGS=""
 RUN DESTDIR=/tmp/install make install ${OPENMPI_MAKE_INSTALL_ARGS}
 
 ################################################

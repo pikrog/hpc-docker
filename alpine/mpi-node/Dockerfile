@@ -2,9 +2,9 @@
 #                      MPI Cluster Node                      #
 ##############################################################
 
-ARG MPI_VERSION_TAG
-ARG BASE_DISTRO_TAG
-ARG BASE_IMAGE_NAME
+ARG MPI_VERSION_TAG="4.1.1"
+ARG BASE_DISTRO_TAG="alpine"
+ARG BASE_IMAGE_NAME="pikrog/mpich"
 FROM ${BASE_IMAGE_NAME}:${MPI_VERSION_TAG}-${BASE_DISTRO_TAG}
 
 # Install SSH, dumb-init (for proper SSH process signal handling), dig (for domain resolution) and account management tools
@@ -43,13 +43,13 @@ ARG MPI_USER="user"
 RUN adduser -D "${MPI_USER}" \
 # Unlock the user for SSH, disallow password authentication
 	&& usermod -p "*" "${MPI_USER}"
-	
-# Path to the MPI directory (where MPI executables will be placed)
-# The default path is ~/mpi
-ARG MPI_DIRECTORY="/home/${MPI_USER}/mpi"
 
 # Switch to the MPI user to create their own files
 USER ${MPI_USER}
+
+# Path to the MPI directory (where MPI executables will be placed)
+# The default path is ~/mpi
+ARG MPI_DIRECTORY="/home/${MPI_USER}/mpi"
 
 # Prepare the main directory for MPI programs
 RUN \
@@ -69,9 +69,6 @@ USER root
 # If not provided, the default path is /etc/mpi/hosts
 ARG DEFAULT_HOST_FILE="/etc/mpi/hosts"
 
-# Hydra PM looks for a hosts file specified by this environmental variable (unless provided manually with -machinefile)
-ARG DEFAULT_HOST_FILE_ENV="HYDRA_HOST_FILE"
-
 # Prepare the default hosts file
 RUN \
 # Create the directory hierarchy
@@ -87,6 +84,9 @@ RUN \
 
 # Restore workdir
 WORKDIR /
+
+# Hydra PM looks for a hosts file specified by this environmental variable (unless provided manually with -machinefile)
+ARG DEFAULT_HOST_FILE_ENV="HYDRA_HOST_FILE"
 
 # Permamently export some of the environmental variables
 RUN \
